@@ -21,37 +21,57 @@ const BROWSER_HEADERS = {
 };
 
 /**
+ * Convert any Tumblr media URL to its original .gif version.
+ * Tumblr serves GIFs as .gifv or poster .jpg — we strip those suffixes
+ * and replace with .gif to get the original animated file.
+ */
+function toGifUrl(url) {
+  // Remove .gifv extension → .gif
+  url = url.replace(/\.gifv$/i, '.gif');
+  // Remove _frame1 / poster / thumbnail suffixes Tumblr appends
+  url = url.replace(/_\d+\.jpg$/i, '.gif');
+  // Strip query strings (Tumblr sometimes adds ?width=... etc)
+  url = url.split('?')[0];
+  return url;
+}
+
+/**
  * Extract GIF URLs from Tumblr HTML.
  * Tries multiple strategies in order of reliability.
  */
 function extractGifUrls(html) {
   const gifs = new Set();
 
-  // Strategy 1: 64.media.tumblr.com GIF URLs (most reliable — direct CDN)
-  const cdnGifs = html.match(/https:\/\/64\.media\.tumblr\.com\/[a-zA-Z0-9_\/.\-?=&%]+\.gif[^"'\s<>]*/g);
-  if (cdnGifs) cdnGifs.forEach(u => gifs.add(u.split('"')[0].split("'")[0]));
+  // Strategy 1: 64.media.tumblr.com URLs — .gif AND .gifv (gifv = gif in disguise)
+  const cdnAll = html.match(/https:\/\/64\.media\.tumblr\.com\/[a-zA-Z0-9_\/.\-?=&%]+(\.gif|\.gifv)[^"'\s<>]*/gi);
+  if (cdnAll) cdnAll.forEach(u => gifs.add(toGifUrl(u.split('"')[0].split("'")[0])));
 
-  // Strategy 2: Any tumblr media URL ending in .gif
-  const mediaGifs = html.match(/https:\/\/[a-z0-9]+\.media\.tumblr\.com\/[^"'\s<>]+\.gif[^"'\s<>]*/g);
-  if (mediaGifs) mediaGifs.forEach(u => gifs.add(u.split('"')[0].split("'")[0]));
+  // Strategy 2: Any tumblr media URL ending in .gif or .gifv
+  const mediaAll = html.match(/https:\/\/[a-z0-9]+\.media\.tumblr\.com\/[^"'\s<>]+(\.gif|\.gifv)[^"'\s<>]*/gi);
+  if (mediaAll) mediaAll.forEach(u => gifs.add(toGifUrl(u.split('"')[0].split("'")[0])));
 
-  // Strategy 3: og:image meta tag (often points to preview, but sometimes the gif)
-  const ogMatch = html.match(/property=["']og:image["'][^>]*content=["']([^"']+\.gif[^"']*)["']/i)
-                || html.match(/content=["']([^"']+\.gif[^"']*)["'][^>]*property=["']og:image["']/i);
-  if (ogMatch) gifs.add(ogMatch[1]);
+  // Strategy 3: og:image meta tag
+  const ogMatch = html.match(/property=["']og:image["'][^>]*content=["']([^"']+\.(gif|gifv)[^"']*)["']/i)
+                || html.match(/content=["']([^"']+\.(gif|gifv)[^"']*)["'][^>]*property=["']og:image["']/i);
+  if (ogMatch) gifs.add(toGifUrl(ogMatch[1]));
 
   // Strategy 4: JSON data embedded in <script> tags (Tumblr SSR state)
   const jsonBlocks = html.match(/<script[^>]*type=["']application\/json["'][^>]*>([\s\S]*?)<\/script>/gi) || [];
   for (const block of jsonBlocks) {
-    const urls = block.match(/https:\\\/\\\/64\.media\.tumblr\.com\\\/[^"'\\]+\.gif/g);
-    if (urls) urls.forEach(u => gifs.add(u.replace(/\\\//g, '/')));
+    const urls = block.match(/https:\\\/\\\/64\.media\.tumblr\.com\\\/[^"'\\]+(\.gif|\.gifv)/gi);
+    if (urls) urls.forEach(u => gifs.add(toGifUrl(u.replace(/\\\//g, '/'))));
   }
 
   // Strategy 5: escaped URLs in inline scripts
-  const escaped = html.match(/https:\\u002F\\u002F64\.media\.tumblr\.com\\u002F[^"'\\]+\.gif/g);
-  if (escaped) escaped.forEach(u => gifs.add(decodeURIComponent(u.replace(/\\u002F/g, '/'))));
+  const escaped = html.match(/https:\\u002F\\u002F64\.media\.tumblr\.com\\u002F[^"'\\]+(\.gif|\.gifv)/gi);
+  if (escaped) escaped.forEach(u => gifs.add(toGifUrl(decodeURIComponent(u.replace(/\\u002F/g, '/')))));
 
-  return [...gifs].filter(u => u.startsWith('http'));
+  // Strategy 6: poster images — Tumblr uses _frame1.jpg as video poster for GIFs
+  // e.g. https://64.media.tumblr.com/abc/tumblr_xxx_frame1.jpg → tumblr_xxx.gif
+  const posters = html.match(/https:\/\/64\.media\.tumblr\.com\/[^"'\s<>]+_frame1\.jpg/gi);
+  if (posters) posters.forEach(u => gifs.add(toGifUrl(u.split('"')[0].split("'")[0])));
+
+  return [...gifs].filter(u => u.startsWith('http') && u.endsWith('.gif'));
 }
 
 /**
@@ -131,8 +151,12 @@ app.get('/api/download', async (req, res) => {
       timeout: 30000,
     });
 
-    const filename = url.split('/').pop().split('?')[0] || 'download.gif';
-    res.setHeader('Content-Type', upstream.headers['content-type'] || 'image/gif');
+    // Force .gif filename regardless of what the CDN returns
+    let filename = url.split('/').pop().split('?')[0] || 'download.gif';
+    if (!filename.toLowerCase().endsWith('.gif')) {
+      filename = filename.replace(/\.[^.]+$/, '') + '.gif';
+    }
+    res.setHeader('Content-Type', 'image/gif');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     if (upstream.headers['content-length']) {
       res.setHeader('Content-Length', upstream.headers['content-length']);
