@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tumblr GIF Downloader</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0c0c0e;
+      --surface: #16161a;
+      --surface-2: #1e1e24;
+      --surface-3: #26262e;
+      --border: rgba(255,255,255,0.07);
+      --border-hover: rgba(255,255,255,0.14);
+      --text: #ececec;
+      --text-muted: #888;
+      --text-dim: #555;
+      --accent: #a78bfa;
+      --accent-bg: rgba(167,139,250,0.1);
+      --accent-border: rgba(167,139,250,0.2);
+      --danger: #f87171;
+      --danger-bg: rgba(248,113,113,0.08);
+      --danger-border: rgba(248,113,113,0.2);
+      --success: #4ade80;
+      --radius: 12px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    .container { width: 100%; max-width: 580px; }
+
+    /* Header */
+    .header { text-align: center; margin-bottom: 2.5rem; }
+    .emoji { font-size: 3rem; display: block; margin-bottom: 1rem; }
+    h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      background: linear-gradient(135deg, #c4b5fd 0%, #a78bfa 50%, #818cf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .subtitle { color: var(--text-muted); font-size: 0.92rem; margin-top: 0.5rem; }
+
+    /* Input card */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+    }
+
+    .input-wrap {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 0.75rem;
+    }
+
+    input[type="url"] {
+      flex: 1;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.88rem;
+      padding: 0.7rem 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+      min-width: 0;
+    }
+    input::placeholder { color: var(--text-dim); }
+    input:focus { border-color: var(--accent); }
+
+    .btn-primary {
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: #0c0c0e;
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 700;
+      padding: 0.7rem 1.25rem;
+      transition: opacity 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+    .btn-primary:hover { opacity: 0.88; }
+    .btn-primary:active { transform: scale(0.97); }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .hint { font-size: 0.78rem; color: var(--text-dim); }
+
+    /* Status bar */
+    .status {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.84rem;
+      margin-top: 1rem;
+      padding: 0.7rem 1rem;
+      border-radius: 8px;
+    }
+    .status.loading {
+      display: flex;
+      background: var(--accent-bg);
+      border: 1px solid var(--accent-border);
+      color: var(--accent);
+    }
+    .status.error {
+      display: flex;
+      background: var(--danger-bg);
+      border: 1px solid var(--danger-border);
+      color: var(--danger);
+    }
+
+    .spinner {
+      width: 15px; height: 15px;
+      border: 2px solid rgba(167,139,250,0.25);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Results */
+    .results { margin-top: 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
+
+    .gif-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .gif-img-wrap {
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 120px;
+    }
+
+    .gif-img {
+      width: 100%;
+      max-height: 400px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .gif-footer {
+      padding: 0.8rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border-top: 1px solid var(--border);
+    }
+
+    .gif-label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .btn-dl {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--accent);
+      border: none;
+      border-radius: 7px;
+      color: #0c0c0e;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 700;
+      padding: 0.5rem 1rem;
+      text-decoration: none;
+      transition: opacity 0.15s;
+      flex-shrink: 0;
+    }
+    .btn-dl:hover { opacity: 0.85; }
+
+    .count-badge {
+      display: inline-block;
+      background: var(--accent-bg);
+      border: 1px solid var(--accent-border);
+      color: var(--accent);
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      margin-left: 8px;
+    }
+
+    .section-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+      display: none;
+    }
+    .section-label.visible { display: flex; align-items: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <span class="emoji">🎞️</span>
+      <h1>Tumblr GIF Downloader</h1>
+      <p class="subtitle">Paste a Tumblr post link — we'll find and download the GIF for you</p>
+    </div>
+
+    <div class="card">
+      <div class="input-wrap">
+        <input type="url" id="urlInput"
+          placeholder="https://www.tumblr.com/blog/820145826292760576"
+          autocomplete="off" spellcheck="false" />
+        <button class="btn-primary" id="fetchBtn" onclick="fetchGifs()">Find GIFs</button>
+      </div>
+      <p class="hint">Works with any public Tumblr post URL that contains animated GIFs</p>
+
+      <div class="status" id="status">
+        <div class="spinner" id="spinner"></div>
+        <span id="statusText">Fetching post…</span>
+      </div>
+    </div>
+
+    <div class="section-label" id="sectionLabel">
+      Found GIFs <span class="count-badge" id="countBadge">0</span>
+    </div>
+    <div class="results" id="results"></div>
+  </div>
+
+  <script>
+    const urlInput = document.getElementById('urlInput');
+    const fetchBtn = document.getElementById('fetchBtn');
+    const statusEl = document.getElementById('status');
+    const statusText = document.getElementById('statusText');
+    const spinner = document.getElementById('spinner');
+    const resultsEl = document.getElementById('results');
+    const sectionLabel = document.getElementById('sectionLabel');
+    const countBadge = document.getElementById('countBadge');
+
+    urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') fetchGifs(); });
+
+    function setStatus(msg, type) {
+      statusEl.className = 'status ' + type;
+      statusText.textContent = msg;
+      spinner.style.display = type === 'loading' ? 'block' : 'none';
+    }
+
+    function clearStatus() { statusEl.className = 'status'; }
+
+    async function fetchGifs() {
+      const url = urlInput.value.trim();
+      if (!url) return;
+
+      resultsEl.innerHTML = '';
+      sectionLabel.classList.remove('visible');
+      fetchBtn.disabled = true;
+      setStatus('Fetching post…', 'loading');
+
+      try {
+        const resp = await fetch('/api/extract', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }),
+        });
+
+        const data = await resp.json();
+
+        if (!resp.ok) {
+          setStatus(data.error || 'Something went wrong.', 'error');
+          return;
+        }
+
+        clearStatus();
+        renderGifs(data.gifs);
+
+      } catch (err) {
+        setStatus('Network error — is the server running?', 'error');
+      } finally {
+        fetchBtn.disabled = false;
+      }
+    }
+
+    function renderGifs(gifs) {
+      countBadge.textContent = gifs.length;
+      sectionLabel.classList.add('visible');
+
+      gifs.forEach((gifUrl, i) => {
+        const filename = gifUrl.split('/').pop().split('?')[0] || `gif-${i + 1}.gif`;
+        const shortName = filename.length > 28 ? filename.slice(0, 25) + '…' : filename;
+
+        const card = document.createElement('div');
+        card.className = 'gif-card';
+        card.innerHTML = `
+          <div class="gif-img-wrap">
+            <img class="gif-img" src="${gifUrl}" alt="GIF ${i + 1}" loading="lazy" />
+          </div>
+          <div class="gif-footer">
+            <span class="gif-label" title="${filename}">${shortName}</span>
+            <a class="btn-dl" href="/api/download?url=${encodeURIComponent(gifUrl)}" download="${filename}">
+              ⬇ Download
+            </a>
+          </div>
+        `;
+        resultsEl.appendChild(card);
+      });
+    }
+  </script>
+</body>
+</html>
