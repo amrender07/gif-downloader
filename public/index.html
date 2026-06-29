@@ -36,9 +36,8 @@
       align-items: center;
       padding: 2.5rem 1rem;
     }
-    .container { width: 100%; max-width: 600px; }
+    .container { width: 100%; max-width: 640px; }
 
-    /* Header */
     .header { text-align: center; margin-bottom: 2rem; }
     .emoji { font-size: 2.8rem; display: block; margin-bottom: 0.75rem; }
     h1 {
@@ -51,29 +50,22 @@
     /* Tabs */
     .tabs {
       display: flex; gap: 4px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 4px;
-      margin-bottom: 1rem;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 4px; margin-bottom: 1rem;
     }
     .tab {
-      flex: 1; padding: 0.55rem 1rem;
-      border: none; border-radius: 7px;
+      flex: 1; padding: 0.55rem 1rem; border: none; border-radius: 7px;
       background: transparent; color: var(--text-muted);
-      cursor: pointer; font-size: 0.88rem; font-weight: 600;
-      transition: all 0.15s;
+      cursor: pointer; font-size: 0.88rem; font-weight: 600; transition: all 0.15s;
     }
     .tab:hover { color: var(--text); }
     .tab.active { background: var(--surface-3); color: var(--text); }
     .tab-tumblr.active { color: var(--accent); }
     .tab-telegram.active { color: var(--tg); }
 
-    /* Panel */
     .panel { display: none; }
     .panel.active { display: block; }
 
-    /* Card */
     .card {
       background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--radius); padding: 1.4rem;
@@ -101,11 +93,9 @@
 
     .hint { font-size: 0.78rem; color: var(--text-dim); }
 
-    /* Status */
     .status {
       display: none; align-items: center; gap: 10px;
-      font-size: 0.84rem; margin-top: 1rem;
-      padding: 0.7rem 1rem; border-radius: 8px;
+      font-size: 0.84rem; margin-top: 1rem; padding: 0.7rem 1rem; border-radius: 8px;
     }
     .status.loading { display: flex; background: var(--accent-bg); border: 1px solid var(--accent-border); color: var(--accent); }
     .status.loading.tg { background: var(--tg-bg); border-color: var(--tg-border); color: var(--tg); }
@@ -118,7 +108,7 @@
     .spinner.tg { border-color: rgba(41,182,246,0.25); border-top-color: var(--tg); }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Results */
+    /* Tumblr results */
     .results { margin-top: 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
     .section-label {
       font-size: 0.8rem; font-weight: 600; color: var(--text-muted);
@@ -126,7 +116,6 @@
       margin-bottom: 0.5rem; display: none; align-items: center; gap: 8px;
     }
     .section-label.visible { display: flex; }
-
     .count-badge {
       display: inline-block; border-radius: 6px;
       font-size: 0.75rem; font-weight: 600; padding: 2px 8px;
@@ -138,29 +127,21 @@
       background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--radius); overflow: hidden;
     }
-    .gif-img-wrap {
-      background: #000; display: flex; align-items: center;
-      justify-content: center; min-height: 80px;
-    }
+    .gif-img-wrap { background: #000; display: flex; align-items: center; justify-content: center; min-height: 80px; }
     .gif-img { width: 100%; max-height: 380px; object-fit: contain; display: block; }
-
     .gif-footer {
       padding: 0.75rem 1rem; display: flex; align-items: center;
       justify-content: space-between; gap: 10px; border-top: 1px solid var(--border);
     }
     .gif-label { font-size: 0.78rem; color: var(--text-muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
     .btn-dl {
       display: flex; align-items: center; gap: 6px;
       border: none; border-radius: 7px; color: #0c0c0e;
       cursor: pointer; font-size: 0.82rem; font-weight: 700;
-      padding: 0.5rem 1rem; text-decoration: none;
-      transition: opacity 0.15s; flex-shrink: 0;
+      padding: 0.5rem 1rem; text-decoration: none; transition: opacity 0.15s; flex-shrink: 0;
     }
     .btn-dl:hover { opacity: 0.85; }
     .btn-dl.tumblr { background: var(--accent); }
-    .btn-dl.telegram { background: var(--tg); }
-    .btn-dl:disabled { opacity: 0.4; cursor: not-allowed; }
 
     /* Telegram sticker grid */
     .sticker-pack-title {
@@ -168,32 +149,103 @@
       margin-bottom: 0.75rem; margin-top: 1.25rem;
     }
     .sticker-grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-      gap: 10px;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px;
     }
     .sticker-item {
       background: var(--surface); border: 1px solid var(--border);
-      border-radius: 10px; overflow: hidden; display: flex;
-      flex-direction: column; align-items: center;
+      border-radius: 10px; overflow: hidden; display: flex; flex-direction: column;
+    }
+
+    /* Preview box */
+    .preview-box {
+      position: relative; width: 100%; aspect-ratio: 1;
+      background: #111; display: flex; align-items: center; justify-content: center;
     }
     .sticker-preview {
-      width: 100%; aspect-ratio: 1; object-fit: contain;
-      background: #111; padding: 6px;
+      width: 100%; height: 100%; object-fit: contain; padding: 8px;
     }
-    .sticker-footer {
-      width: 100%; padding: 6px 8px;
+    .preview-err {
+      width: 100%; height: 100%; display: flex; align-items: center;
+      justify-content: center; color: var(--text-dim); font-size: 2rem;
+    }
+    .anim-badge {
+      position: absolute; top: 6px; right: 6px;
+      background: var(--tg); color: #0c0c0e;
+      font-size: 0.6rem; font-weight: 800; padding: 2px 5px; border-radius: 4px;
+    }
+    .preview-loading {
+      position: absolute; inset: 0; display: flex; align-items: center;
+      justify-content: center; background: #111;
+    }
+
+    /* Two action buttons */
+    .sticker-actions {
+      display: flex; gap: 6px; padding: 8px;
       border-top: 1px solid var(--border);
+    }
+    .sticker-actions button {
+      flex: 1; border: none; border-radius: 7px; cursor: pointer;
+      font-size: 0.75rem; font-weight: 700; padding: 6px 4px;
+      transition: opacity 0.15s; white-space: nowrap;
+    }
+    .sticker-actions button:hover { opacity: 0.82; }
+    .sticker-actions button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-preview-sticker { background: var(--surface-3); color: var(--text); border: 1px solid var(--border) !important; }
+    .btn-preview-sticker:hover { border-color: var(--tg-border) !important; color: var(--tg); }
+    .btn-dl-sticker { background: var(--tg); color: #0c0c0e; }
+    .btn-dl-sticker.done { background: #4ade80; }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.85); z-index: 1000;
+      align-items: center; justify-content: center; padding: 1rem;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; max-width: 420px; width: 100%;
+      overflow: hidden; display: flex; flex-direction: column;
+    }
+    .modal-header {
       display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 1.2rem; border-bottom: 1px solid var(--border);
     }
-    .sticker-emoji { font-size: 1rem; }
-    .sticker-dl {
-      background: var(--tg); border: none; border-radius: 5px;
-      color: #0c0c0e; cursor: pointer; font-size: 0.7rem; font-weight: 700;
-      padding: 3px 8px; transition: opacity 0.15s;
+    .modal-title { font-size: 0.95rem; font-weight: 700; }
+    .modal-close {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text-muted); cursor: pointer;
+      font-size: 1rem; line-height: 1; padding: 4px 10px; transition: color 0.15s;
     }
-    .sticker-dl:hover { opacity: 0.85; }
-    .sticker-dl:disabled { opacity: 0.4; cursor: not-allowed; }
-    .sticker-dl.done { background: #4ade80; }
+    .modal-close:hover { color: var(--text); }
+    .modal-body {
+      display: flex; align-items: center; justify-content: center;
+      background: #000; min-height: 240px; position: relative;
+    }
+    .modal-gif {
+      max-width: 100%; max-height: 360px; object-fit: contain; display: block;
+    }
+    .modal-loading {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 12px; color: var(--tg); font-size: 0.85rem; padding: 3rem;
+    }
+    .modal-spinner {
+      width: 28px; height: 28px; border: 3px solid var(--tg-border);
+      border-top-color: var(--tg); border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    .modal-footer {
+      padding: 1rem 1.2rem; border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    }
+    .modal-info { font-size: 0.8rem; color: var(--text-muted); }
+    .modal-dl {
+      background: var(--tg); border: none; border-radius: 8px;
+      color: #0c0c0e; cursor: pointer; font-size: 0.88rem; font-weight: 700;
+      padding: 0.6rem 1.2rem; transition: opacity 0.15s;
+    }
+    .modal-dl:hover { opacity: 0.85; }
+    .modal-dl:disabled { opacity: 0.4; cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -204,13 +256,12 @@
     <p class="subtitle">Download GIFs from Tumblr posts &amp; Telegram sticker packs</p>
   </div>
 
-  <!-- Tabs -->
   <div class="tabs">
     <button class="tab tab-tumblr active" onclick="switchTab('tumblr')">🎭 Tumblr</button>
     <button class="tab tab-telegram" onclick="switchTab('telegram')">✈️ Telegram</button>
   </div>
 
-  <!-- Tumblr Panel -->
+  <!-- Tumblr -->
   <div class="panel panel-tumblr active" id="panel-tumblr">
     <div class="card">
       <div class="input-wrap">
@@ -220,7 +271,7 @@
       <p class="hint">Paste any public Tumblr post URL containing animated GIFs</p>
       <div class="status" id="tumblrStatus">
         <div class="spinner"></div>
-        <span id="tumblrStatusText">Fetching post…</span>
+        <span id="tumblrStatusText"></span>
       </div>
     </div>
     <div class="section-label" id="tumblrLabel">
@@ -229,20 +280,41 @@
     <div class="results" id="tumblrResults"></div>
   </div>
 
-  <!-- Telegram Panel -->
+  <!-- Telegram -->
   <div class="panel panel-telegram" id="panel-telegram">
     <div class="card">
       <div class="input-wrap">
         <input type="url" id="tgUrl" placeholder="https://t.me/addstickers/PackName" />
         <button class="btn btn-telegram" id="tgBtn" onclick="fetchTelegram()">Load Pack</button>
       </div>
-      <p class="hint">Paste a Telegram sticker pack link — all stickers will load for individual download</p>
+      <p class="hint">Paste a Telegram sticker pack link — preview &amp; download each sticker as GIF</p>
       <div class="status" id="tgStatus">
         <div class="spinner tg"></div>
-        <span id="tgStatusText">Loading sticker pack…</span>
+        <span id="tgStatusText"></span>
       </div>
     </div>
     <div id="tgResults"></div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modalTitle">Sticker Preview</span>
+      <button class="modal-close" onclick="closeModalDirect()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody">
+      <div class="modal-loading" id="modalLoading">
+        <div class="modal-spinner"></div>
+        <span>Converting to GIF…</span>
+      </div>
+      <img class="modal-gif" id="modalGif" style="display:none" alt="Sticker GIF" />
+    </div>
+    <div class="modal-footer">
+      <span class="modal-info" id="modalInfo">Animated GIF</span>
+      <button class="modal-dl" id="modalDlBtn" disabled onclick="downloadFromModal()">⬇ Download GIF</button>
+    </div>
   </div>
 </div>
 
@@ -255,7 +327,6 @@
     document.querySelector('.tab-' + tab).classList.add('active');
   }
 
-  // ── Status helpers ────────────────────────────────────────
   function setStatus(id, textId, msg, type, isTg) {
     const el = document.getElementById(id);
     el.className = 'status ' + type + (isTg && type === 'loading' ? ' tg' : '');
@@ -265,7 +336,6 @@
 
   // ── TUMBLR ────────────────────────────────────────────────
   const tumblrUrlEl = document.getElementById('tumblrUrl');
-  const tumblrBtn = document.getElementById('tumblrBtn');
   tumblrUrlEl.addEventListener('keydown', e => { if (e.key === 'Enter') fetchTumblr(); });
 
   async function fetchTumblr() {
@@ -273,22 +343,19 @@
     if (!url) return;
     document.getElementById('tumblrResults').innerHTML = '';
     document.getElementById('tumblrLabel').classList.remove('visible');
-    tumblrBtn.disabled = true;
+    document.getElementById('tumblrBtn').disabled = true;
     setStatus('tumblrStatus', 'tumblrStatusText', 'Fetching post…', 'loading', false);
-
     try {
       const resp = await fetch('/api/extract', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
       });
       const data = await resp.json();
       if (!resp.ok) { setStatus('tumblrStatus', 'tumblrStatusText', data.error || 'Error', 'error', false); return; }
       clearStatus('tumblrStatus');
       renderTumblrGifs(data.gifs);
-    } catch {
-      setStatus('tumblrStatus', 'tumblrStatusText', 'Network error — is the server running?', 'error', false);
-    } finally { tumblrBtn.disabled = false; }
+    } catch { setStatus('tumblrStatus', 'tumblrStatusText', 'Network error', 'error', false); }
+    finally { document.getElementById('tumblrBtn').disabled = false; }
   }
 
   function renderTumblrGifs(gifs) {
@@ -312,29 +379,25 @@
 
   // ── TELEGRAM ──────────────────────────────────────────────
   const tgUrlEl = document.getElementById('tgUrl');
-  const tgBtn = document.getElementById('tgBtn');
   tgUrlEl.addEventListener('keydown', e => { if (e.key === 'Enter') fetchTelegram(); });
 
   async function fetchTelegram() {
     const url = tgUrlEl.value.trim();
     if (!url) return;
     document.getElementById('tgResults').innerHTML = '';
-    tgBtn.disabled = true;
+    document.getElementById('tgBtn').disabled = true;
     setStatus('tgStatus', 'tgStatusText', 'Loading sticker pack…', 'loading', true);
-
     try {
       const resp = await fetch('/api/telegram/stickers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
       });
       const data = await resp.json();
       if (!resp.ok) { setStatus('tgStatus', 'tgStatusText', data.error || 'Error', 'error', true); return; }
       clearStatus('tgStatus');
       renderTelegramStickers(data);
-    } catch {
-      setStatus('tgStatus', 'tgStatusText', 'Network error — is the server running?', 'error', true);
-    } finally { tgBtn.disabled = false; }
+    } catch { setStatus('tgStatus', 'tgStatusText', 'Network error', 'error', true); }
+    finally { document.getElementById('tgBtn').disabled = false; }
   }
 
   function renderTelegramStickers({ title, stickers }) {
@@ -346,21 +409,31 @@
     stickers.forEach(s => {
       const item = document.createElement('div');
       item.className = 'sticker-item';
-
-      // Preview via Telegram file proxy
-      const previewUrl = `/api/telegram/preview?fileId=${encodeURIComponent(s.fileId)}`;
+      const previewUrl = `/api/telegram/preview?fileId=${encodeURIComponent(s.thumbFileId)}&animated=${s.isAnimated}`;
 
       item.innerHTML = `
-        <img class="sticker-preview" src="${previewUrl}" loading="lazy" alt="${s.emoji}" />
-        <div class="sticker-footer">
-          <span class="sticker-emoji">${s.emoji}</span>
-          <button class="sticker-dl" onclick="downloadSticker(this, '${s.fileId}', ${s.index})">⬇ GIF</button>
+        <div class="preview-box">
+          <img class="sticker-preview" src="${previewUrl}" loading="lazy" alt="${s.emoji}"
+            onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
+          <div class="preview-err" style="display:none">🤷</div>
+          ${s.isAnimated ? '<span class="anim-badge">GIF</span>' : ''}
+        </div>
+        <div class="sticker-actions">
+          <button class="btn-preview-sticker"
+            onclick="previewSticker('${s.fileId}', ${s.index}, '${s.emoji}', ${s.isAnimated})">
+            👁 Preview
+          </button>
+          <button class="btn-dl-sticker"
+            onclick="downloadSticker(this, '${s.fileId}', ${s.index})">
+            ⬇ GIF
+          </button>
         </div>`;
       grid.appendChild(item);
     });
     container.appendChild(grid);
   }
 
+  // ── Download sticker directly ──────────────────────────────
   async function downloadSticker(btn, fileId, index) {
     btn.disabled = true;
     btn.textContent = '…';
@@ -377,8 +450,75 @@
       btn.classList.add('done');
     } catch {
       btn.textContent = '✗';
+    } finally {
+      setTimeout(() => { btn.disabled = false; }, 2000);
     }
   }
+
+  // ── Modal preview ─────────────────────────────────────────
+  let modalGifBlob = null;
+  let modalIndex = 0;
+
+  async function previewSticker(fileId, index, emoji, isAnimated) {
+    modalGifBlob = null;
+    modalIndex = index;
+
+    // Open modal in loading state
+    document.getElementById('modalTitle').textContent = `${emoji} Sticker #${index + 1}`;
+    document.getElementById('modalGif').style.display = 'none';
+    document.getElementById('modalGif').src = '';
+    document.getElementById('modalLoading').style.display = 'flex';
+    document.getElementById('modalDlBtn').disabled = true;
+    document.getElementById('modalInfo').textContent = isAnimated ? 'Animated GIF' : 'Static sticker';
+    document.getElementById('modalOverlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    try {
+      // Fetch the full GIF conversion
+      const resp = await fetch(`/api/telegram/download?fileId=${encodeURIComponent(fileId)}&index=${index}`);
+      if (!resp.ok) throw new Error('Failed');
+      const blob = await resp.blob();
+      modalGifBlob = blob;
+
+      const url = URL.createObjectURL(blob);
+      const gifEl = document.getElementById('modalGif');
+      gifEl.onload = () => {
+        document.getElementById('modalLoading').style.display = 'none';
+        gifEl.style.display = 'block';
+        document.getElementById('modalDlBtn').disabled = false;
+        const kb = Math.round(blob.size / 1024);
+        document.getElementById('modalInfo').textContent = `${isAnimated ? 'Animated' : 'Static'} GIF · ${kb} KB`;
+      };
+      gifEl.src = url;
+    } catch {
+      document.getElementById('modalLoading').innerHTML = '<span style="color:var(--danger)">Failed to load preview</span>';
+    }
+  }
+
+  function downloadFromModal() {
+    if (!modalGifBlob) return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(modalGifBlob);
+    a.download = `sticker_${String(modalIndex).padStart(3,'0')}.gif`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function closeModal(e) {
+    if (e.target === document.getElementById('modalOverlay')) closeModalDirect();
+  }
+  function closeModalDirect() {
+    document.getElementById('modalOverlay').classList.remove('open');
+    document.body.style.overflow = '';
+    // Free blob memory
+    const gifEl = document.getElementById('modalGif');
+    if (gifEl.src.startsWith('blob:')) URL.revokeObjectURL(gifEl.src);
+    gifEl.src = '';
+    modalGifBlob = null;
+  }
+
+  // Close modal with Escape key
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModalDirect(); });
 </script>
 </body>
 </html>
