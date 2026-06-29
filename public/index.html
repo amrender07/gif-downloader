@@ -354,23 +354,23 @@
         <img class="sticker-preview" src="${previewUrl}" loading="lazy" alt="${s.emoji}" />
         <div class="sticker-footer">
           <span class="sticker-emoji">${s.emoji}</span>
-          <button class="sticker-dl" onclick="downloadSticker(this, '${s.fileId}', '${s.emoji}')">⬇ GIF</button>
+          <button class="sticker-dl" onclick="downloadSticker(this, '${s.fileId}', ${s.index})">⬇ GIF</button>
         </div>`;
       grid.appendChild(item);
     });
     container.appendChild(grid);
   }
 
-  async function downloadSticker(btn, fileId, emoji) {
+  async function downloadSticker(btn, fileId, index) {
     btn.disabled = true;
     btn.textContent = '…';
     try {
-      const resp = await fetch(`/api/telegram/download?fileId=${encodeURIComponent(fileId)}&emoji=${encodeURIComponent(emoji)}`);
+      const resp = await fetch(`/api/telegram/download?fileId=${encodeURIComponent(fileId)}&index=${index}`);
       if (!resp.ok) { btn.textContent = '✗'; btn.style.background = 'var(--danger)'; return; }
       const blob = await resp.blob();
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `${emoji}_sticker.gif`;
+      a.download = `sticker_${String(index).padStart(3,'0')}.gif`;
       a.click();
       URL.revokeObjectURL(a.href);
       btn.textContent = '✓';

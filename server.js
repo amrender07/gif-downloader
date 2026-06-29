@@ -129,7 +129,6 @@ app.post('/api/telegram/stickers', async (req, res) => {
   const { url } = req.body;
   if (!url) return res.status(400).json({ error: 'No URL provided.' });
 
-  // Extract pack name from URL: https://t.me/addstickers/PACK_NAME
   const match = url.match(/t\.me\/addstickers\/([a-zA-Z0-9_]+)/);
   if (!match) return res.status(400).json({ error: 'Invalid Telegram sticker pack URL. Should look like https://t.me/addstickers/PackName' });
 
@@ -142,23 +141,17 @@ app.post('/api/telegram/stickers', async (req, res) => {
   try {
     const response = await axios.get(`${TG_API}/getStickerSet?name=${packName}`, { timeout: 10000 });
     const { ok, result } = response.data;
-
     if (!ok || !result) return res.status(404).json({ error: 'Sticker pack not found.' });
 
-    // Filter only animated stickers (video/webm) and static (webp)
     const stickers = result.stickers.map((s, i) => ({
       index: i,
       fileId: s.file_id,
-      emoji: s.emoji || '🎭',
+      emoji: s.emoji || 'sticker',
       isAnimated: s.is_animated || s.is_video,
       type: s.is_video ? 'video' : s.is_animated ? 'animated' : 'static',
     }));
 
-    return res.json({
-      packName: result.name,
-      title: result.title,
-      stickers,
-    });
+    return res.json({ packName: result.name, title: result.title, stickers });
   } catch (err) {
     if (err.response?.data?.description) {
       return res.status(400).json({ error: err.response.data.description });
@@ -167,10 +160,10 @@ app.post('/api/telegram/stickers', async (req, res) => {
   }
 });
 
-// GET /api/telegram/download?fileId=...&emoji=...
-// Downloads a sticker and converts WebM/WebP → GIF
+// GET /api/telegram/download?fileId=...&index=...
+// Downloads a sticker and converts WebM/WebP to GIF
 app.get('/api/telegram/download', async (req, res) => {
-  const { fileId, emoji = 'sticker' } = req.query;
+  const { fileId, index = '0' } = req.query;
   if (!fileId) return res.status(400).send('No fileId provided.');
 
   if (!TELEGRAM_TOKEN || TELEGRAM_TOKEN === 'YOUR_BOT_TOKEN_HERE') {
@@ -202,18 +195,12 @@ app.get('/api/telegram/download', async (req, res) => {
     });
 
     // Step 3: Convert to GIF using ffmpeg
-    // WebM animated → GIF with good quality palette
-    // WebP static → GIF
     const isWebP = ext === '.webp';
 
     if (isWebP) {
-      // Static sticker: just convert webp → gif
-      await execFileAsync('ffmpeg', [
-        '-y', '-i', tmpInput,
-        tmpGif
-      ]);
+      await execFileAsync('ffmpeg', ['-y', '-i', tmpInput, tmpGif]);
     } else {
-      // Animated WebM → high quality GIF (two-pass with palette)
+      // Animated WebM to high quality GIF (two-pass with palette)
       const palettePath = path.join(os.tmpdir(), `palette_${Date.now()}.png`);
       try {
         await execFileAsync('ffmpeg', [
@@ -238,7 +225,8 @@ app.get('/api/telegram/download', async (req, res) => {
     }
 
     // Step 4: Stream GIF back to client
-    const filename = `${emoji}_sticker.gif`;
+    // Use index-based filename — avoids emoji/non-ASCII in Content-Disposition header
+    const filename = `sticker_${String(index).padStart(3, '0')}.gif`;
     res.setHeader('Content-Type', 'image/gif');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
 
@@ -258,19 +246,19 @@ app.get('/api/telegram/download', async (req, res) => {
 });
 
 // GET /api/telegram/preview?fileId=... — proxy thumbnail for display
-app.get("/api/telegram/preview", async (req, res) => {
+app.get('/api/telegram/preview', async (req, res) => {
   const { fileId } = req.query;
-  if (!fileId) return res.status(400).send("No fileId");
+  if (!fileId) return res.status(400).send('No fileId');
   try {
     const fileRes = await axios.get(`${TG_API}/getFile?file_id=${fileId}`, { timeout: 10000 });
-    if (!fileRes.data.ok) return res.status(404).send("Not found");
+    if (!fileRes.data.ok) return res.status(404).send('Not found');
     const filePath = fileRes.data.result.file_path;
     const dlUrl = `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${filePath}`;
-    const upstream = await axios.get(dlUrl, { responseType: "stream", timeout: 20000 });
-    res.setHeader("Content-Type", upstream.headers["content-type"] || "image/webp");
+    const upstream = await axios.get(dlUrl, { responseType: 'stream', timeout: 20000 });
+    res.setHeader('Content-Type', upstream.headers['content-type'] || 'image/webp');
     upstream.data.pipe(res);
   } catch (err) {
-    res.status(500).send("Preview failed");
+    res.status(500).send('Preview failed');
   }
 });
 
