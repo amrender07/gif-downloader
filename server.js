@@ -67,6 +67,47 @@ function extractGifUrls(html) {
   return [...gifs].filter(u => u.startsWith('http') && u.endsWith('.gif'));
 }
 
+function extractVideoUrls(html) {
+  const videos = new Set();
+
+  // Strategy 1: direct .mp4 on Tumblr CDN
+  const cdnMp4 = html.match(/https:\/\/[a-z0-9]+\.tumblr\.com\/[^"'\s<>]+\.mp4[^"'\s<>]*/gi);
+  if (cdnMp4) cdnMp4.forEach(u => videos.add(u.split('"')[0].split("'")[0].split('\\')[0]));
+
+  // Strategy 2: va.media.tumblr.com (video CDN)
+  const vaMp4 = html.match(/https:\/\/va\.media\.tumblr\.com\/[^"'\s<>]+\.mp4[^"'\s<>]*/gi);
+  if (vaMp4) vaMp4.forEach(u => videos.add(u.split('"')[0].split("'")[0]));
+
+  // Strategy 3: video src attributes
+  const srcMp4 = html.match(/src=["'](https:\/\/[^"'\s<>]+\.mp4[^"']*)/gi);
+  if (srcMp4) srcMp4.forEach(u => {
+    const m = u.match(/src=["'](https:\/\/[^"'\s<>]+\.mp4[^"']*)/i);
+    if (m) videos.add(m[1].split('?')[0]);
+  });
+
+  // Strategy 4: JSON blocks with escaped mp4 URLs
+  const jsonBlocks = html.match(/<script[^>]*type=["']application\/json["'][^>]*>([\s\S]*?)<\/script>/gi) || [];
+  for (const block of jsonBlocks) {
+    const urls = block.match(/https:\\\/\\\/[^"'\\]+\.mp4/gi);
+    if (urls) urls.forEach(u => videos.add(u.replace(/\\\//g, '/').split('"')[0]));
+  }
+
+  // Strategy 5: og:video meta tag
+  const ogVideo = html.match(/property=["']og:video["'][^>]*content=["']([^"']+\.mp4[^"']*)["']/i)
+                || html.match(/content=["']([^"']+\.mp4[^"']*)["'][^>]*property=["']og:video["']/i);
+  if (ogVideo) videos.add(ogVideo[1].split('?')[0]);
+
+  // Strategy 6: iframely / embed URLs with mp4
+  const iframeMp4 = html.match(/["'](https:\/\/[^"'\s]+tumblr[^"'\s]+\.mp4)[^"'\s]*/gi);
+  if (iframeMp4) iframeMp4.forEach(u => {
+    const clean = u.replace(/^["']/, '').split(/["'\s]/)[0].split('?')[0];
+    if (clean.endsWith('.mp4')) videos.add(clean);
+  });
+
+  return [...videos].filter(u => u.startsWith('http') && u.includes('.mp4'));
+}
+
+// POST /api/extract — Tumblr (GIFs + Videos)
 app.post('/api/extract', async (req, res) => {
   const { url } = req.body;
   if (!url || typeof url !== 'string') return res.status(400).json({ error: 'No URL provided.' });
@@ -78,9 +119,14 @@ app.post('/api/extract', async (req, res) => {
 
   try {
     const response = await axios.get(url, { headers: BROWSER_HEADERS, timeout: 15000, maxRedirects: 5 });
-    const gifs = extractGifUrls(response.data);
-    if (gifs.length === 0) return res.status(404).json({ error: 'No GIFs found in this post.' });
-    return res.json({ gifs });
+    const html = response.data;
+    const gifs = extractGifUrls(html);
+    const videos = extractVideoUrls(html);
+
+    if (gifs.length === 0 && videos.length === 0) {
+      return res.status(404).json({ error: 'No GIFs or videos found in this post.' });
+    }
+    return res.json({ gifs, videos });
   } catch (err) {
     if (err.response?.status === 404) return res.status(404).json({ error: 'Post not found.' });
     if (err.response?.status === 403) return res.status(403).json({ error: 'Blog is private or age-restricted.' });
@@ -88,29 +134,33 @@ app.post('/api/extract', async (req, res) => {
   }
 });
 
+// GET /api/download — proxy GIF or video from Tumblr CDN
 app.get('/api/download', async (req, res) => {
   const { url } = req.query;
   if (!url || !url.startsWith('https://')) return res.status(400).send('Invalid URL');
 
-  const allowed = /^https:\/\/(64\.media|[a-z0-9]+\.media)\.tumblr\.com\//;
+  const allowed = /^https:\/\/([a-z0-9]+\.)?(media|tumblr|va\.media)\.tumblr\.com\//;
   if (!allowed.test(url)) return res.status(403).send('Only Tumblr CDN URLs are allowed.');
 
   try {
     const upstream = await axios.get(url, {
       responseType: 'stream',
       headers: { 'User-Agent': BROWSER_HEADERS['User-Agent'], 'Referer': 'https://www.tumblr.com/' },
-      timeout: 30000,
+      timeout: 60000,
     });
 
-    let filename = url.split('/').pop().split('?')[0] || 'download.gif';
-    if (!filename.toLowerCase().endsWith('.gif')) filename = filename.replace(/\.[^.]+$/, '') + '.gif';
+    const isVideo = url.includes('.mp4');
+    let filename = url.split('/').pop().split('?')[0] || (isVideo ? 'video.mp4' : 'download.gif');
+    if (!isVideo && !filename.toLowerCase().endsWith('.gif')) {
+      filename = filename.replace(/\.[^.]+$/, '') + '.gif';
+    }
 
-    res.setHeader('Content-Type', 'image/gif');
+    res.setHeader('Content-Type', isVideo ? 'video/mp4' : 'image/gif');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     if (upstream.headers['content-length']) res.setHeader('Content-Length', upstream.headers['content-length']);
     upstream.data.pipe(res);
   } catch (err) {
-    res.status(500).send('Failed to download GIF.');
+    res.status(500).send('Failed to download file.');
   }
 });
 
@@ -120,7 +170,6 @@ app.get('/api/download', async (req, res) => {
 
 const TG_API = `https://api.telegram.org/bot${TELEGRAM_TOKEN}`;
 
-// Helper: download a Telegram file to disk
 async function downloadTgFile(fileId) {
   const fileRes = await axios.get(`${TG_API}/getFile?file_id=${fileId}`, { timeout: 10000 });
   if (!fileRes.data.ok) throw new Error('File not found on Telegram');
@@ -138,51 +187,30 @@ async function downloadTgFile(fileId) {
   return { tmpPath, ext };
 }
 
-// Helper: convert any sticker file to GIF using ffmpeg
 async function convertToGif(tmpInput, ext) {
   const tmpGif = path.join(os.tmpdir(), `tg_gif_${Date.now()}.gif`);
   const isWebP = ext === '.webp';
-
   if (isWebP) {
     await execFileAsync('ffmpeg', ['-y', '-i', tmpInput, tmpGif]);
   } else {
     const palettePath = path.join(os.tmpdir(), `palette_${Date.now()}.png`);
     try {
-      await execFileAsync('ffmpeg', [
-        '-y', '-i', tmpInput,
-        '-vf', 'fps=15,scale=320:-1:flags=lanczos,palettegen',
-        palettePath
-      ]);
-      await execFileAsync('ffmpeg', [
-        '-y', '-i', tmpInput, '-i', palettePath,
-        '-filter_complex', 'fps=15,scale=320:-1:flags=lanczos[x];[x][1:v]paletteuse',
-        tmpGif
-      ]);
+      await execFileAsync('ffmpeg', ['-y', '-i', tmpInput, '-vf', 'fps=15,scale=320:-1:flags=lanczos,palettegen', palettePath]);
+      await execFileAsync('ffmpeg', ['-y', '-i', tmpInput, '-i', palettePath, '-filter_complex', 'fps=15,scale=320:-1:flags=lanczos[x];[x][1:v]paletteuse', tmpGif]);
       fs.unlink(palettePath, () => {});
     } catch {
-      await execFileAsync('ffmpeg', [
-        '-y', '-i', tmpInput,
-        '-vf', 'fps=15,scale=320:-1:flags=lanczos',
-        tmpGif
-      ]);
+      await execFileAsync('ffmpeg', ['-y', '-i', tmpInput, '-vf', 'fps=15,scale=320:-1:flags=lanczos', tmpGif]);
     }
   }
   return tmpGif;
 }
 
-// Helper: convert animated WebM to PNG (first frame) for preview
 async function convertToPng(tmpInput) {
   const tmpPng = path.join(os.tmpdir(), `tg_preview_${Date.now()}.png`);
-  await execFileAsync('ffmpeg', [
-    '-y', '-i', tmpInput,
-    '-vframes', '1',        // only first frame
-    '-vf', 'scale=200:-1',  // resize to 200px wide
-    tmpPng
-  ]);
+  await execFileAsync('ffmpeg', ['-y', '-i', tmpInput, '-vframes', '1', '-vf', 'scale=200:-1', tmpPng]);
   return tmpPng;
 }
 
-// POST /api/telegram/stickers
 app.post('/api/telegram/stickers', async (req, res) => {
   const { url } = req.body;
   if (!url) return res.status(400).json({ error: 'No URL provided.' });
@@ -191,7 +219,6 @@ app.post('/api/telegram/stickers', async (req, res) => {
   if (!match) return res.status(400).json({ error: 'Invalid Telegram sticker pack URL.' });
 
   const packName = match[1];
-
   if (!TELEGRAM_TOKEN || TELEGRAM_TOKEN === 'YOUR_BOT_TOKEN_HERE') {
     return res.status(500).json({ error: 'Telegram Bot Token not configured.' });
   }
@@ -204,7 +231,6 @@ app.post('/api/telegram/stickers', async (req, res) => {
     const stickers = result.stickers.map((s, i) => ({
       index: i,
       fileId: s.file_id,
-      // Use thumbnail fileId for preview if available (much smaller file)
       thumbFileId: s.thumbnail?.file_id || s.file_id,
       emoji: s.emoji || 'sticker',
       isAnimated: s.is_animated || s.is_video,
@@ -213,16 +239,11 @@ app.post('/api/telegram/stickers', async (req, res) => {
 
     return res.json({ packName: result.name, title: result.title, stickers });
   } catch (err) {
-    if (err.response?.data?.description) {
-      return res.status(400).json({ error: err.response.data.description });
-    }
+    if (err.response?.data?.description) return res.status(400).json({ error: err.response.data.description });
     return res.status(500).json({ error: 'Failed to fetch sticker pack: ' + err.message });
   }
 });
 
-// GET /api/telegram/preview?fileId=...&animated=true/false
-// For static (webp): proxy directly — browsers support webp
-// For animated (webm): extract first frame as PNG via ffmpeg
 app.get('/api/telegram/preview', async (req, res) => {
   const { fileId, animated } = req.query;
   if (!fileId) return res.status(400).send('No fileId');
@@ -235,17 +256,12 @@ app.get('/api/telegram/preview', async (req, res) => {
     tmpPath = dl;
 
     if (animated === 'true') {
-      // Animated WebM — extract first frame as PNG
       tmpOut = await convertToPng(tmpPath);
       res.setHeader('Content-Type', 'image/png');
       const s = fs.createReadStream(tmpOut);
       s.pipe(res);
-      s.on('end', () => {
-        fs.unlink(tmpPath, () => {});
-        fs.unlink(tmpOut, () => {});
-      });
+      s.on('end', () => { fs.unlink(tmpPath, () => {}); fs.unlink(tmpOut, () => {}); });
     } else {
-      // Static WebP — serve directly, browsers support it
       res.setHeader('Content-Type', 'image/webp');
       const s = fs.createReadStream(tmpPath);
       s.pipe(res);
@@ -259,14 +275,10 @@ app.get('/api/telegram/preview', async (req, res) => {
   }
 });
 
-// GET /api/telegram/download?fileId=...&index=...
 app.get('/api/telegram/download', async (req, res) => {
   const { fileId, index = '0' } = req.query;
   if (!fileId) return res.status(400).send('No fileId provided.');
-
-  if (!TELEGRAM_TOKEN || TELEGRAM_TOKEN === 'YOUR_BOT_TOKEN_HERE') {
-    return res.status(500).send('Bot token not configured.');
-  }
+  if (!TELEGRAM_TOKEN || TELEGRAM_TOKEN === 'YOUR_BOT_TOKEN_HERE') return res.status(500).send('Bot token not configured.');
 
   let tmpInput = null;
   let tmpGif = null;
@@ -282,10 +294,7 @@ app.get('/api/telegram/download', async (req, res) => {
 
     const gifStream = fs.createReadStream(tmpGif);
     gifStream.pipe(res);
-    gifStream.on('end', () => {
-      fs.unlink(tmpInput, () => {});
-      fs.unlink(tmpGif, () => {});
-    });
+    gifStream.on('end', () => { fs.unlink(tmpInput, () => {}); fs.unlink(tmpGif, () => {}); });
   } catch (err) {
     console.error('Telegram download error:', err.message);
     if (tmpInput) fs.unlink(tmpInput, () => {});
